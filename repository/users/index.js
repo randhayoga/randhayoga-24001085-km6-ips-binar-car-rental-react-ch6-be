@@ -55,7 +55,7 @@ exports.createAdmin = async (payload) => {
     return data;
 };
 
-exports.getUserByID = async (id) => {
+exports.getUserByID = async (id, roles) => {
     const key = `user:${id}`;
     let data = await getCache(key);
 
@@ -63,23 +63,27 @@ exports.getUserByID = async (id) => {
         return data;
     } else {
         // data is not in cache, then get data from db
-        data = await users.findAll({
-            where: {
-                id,
-            },
-        });
+        const whereCondition = { id };
+
+        if (roles) {
+            whereCondition.role = {
+                [Op.or]: roles,
+            };
+        }
+
+        data = await users.findAll({ where: whereCondition });
 
         if (data.length > 0) {
             await setCache(key, data[0], 300);
             return data[0];
         } else {
-            throw new Error(`User is not found!`);
+            throw new Error(`${roles ? "Admin" : "User"} is not found!`);
         }
     }
 };
 
 exports.getUserByEmail = async (email) => {
-    // For loggin in as regular user
+    // Generic, IDGAF about the role, care only after getting the token to determine the UI
     const key = `user:${email}`;
     let data = await getCache(key);
 
@@ -87,81 +91,27 @@ exports.getUserByEmail = async (email) => {
         return data;
     } else {
         // data is not in cache, then get data from db
-        data = await users.findAll({
-            where: {
-                email,
-                role: "user",
-            },
-        });
+        data = await users.findOne({ where: { email } });
 
-        if (data.length > 0) {
-            await setCache(key, data[0], 300);
-            return data[0];
+        if (data) {
+            await setCache(key, data, 300);
+            return data;
         } else {
-            throw new Error(`User is not found!`);
+            throw new Error("User is not found!");
         }
     }
 };
 
-exports.getAdminByID = async (id) => {
-    // For logging in as admin or superadmin
+exports.updateUser = async (id, payload, currentRole, currentID) => {
     const key = `user:${id}`;
-    let data = await getCache(key);
 
-    if (data) {
-        return data;
-    } else {
-        // data is not in cache, then get data from db
-        data = await users.findAll({
-            where: {
-                id,
-                role: {
-                    [Op.or]: ["admin", "superadmin"],
-                },
-            },
-        });
-
-        if (data.length > 0) {
-            await setCache(key, data[0], 300);
-            return data[0];
-        } else {
-            throw new Error(`Admin is not found!`);
-        }
+    // permision check
+    if (currentRole !== "superadmin" && currentID !== id) {
+        throw new Error(`Forbidden!`);
     }
-};
 
-exports.getAdminByEmail = async (email) => {
-    // For logging in as admin or superadmin
-    const key = `user:${email}`;
-    let data = await getCache(key);
-
-    if (data) {
-        return data;
-    } else {
-        // data is not in cache, then get data from db
-        data = await users.findAll({
-            where: {
-                email,
-                role: {
-                    [Op.or]: ["admin", "superadmin"],
-                },
-            },
-        });
-
-        if (data.length > 0) {
-            await setCache(key, data[0], 300);
-            return data[0];
-        } else {
-            throw new Error(`Admin is not found!`);
-        }
-    }
-};
-
-exports.updateUser = async (id, payload) => {
-    const key = `user:${id}`;
-    const existingUser = await users.findOne({ where: { id } });
-
-    if (payload.photo && payload.photo !== existingUser.photo) {
+    // photo upload
+    if (payload.photo) {
         const { photo } = payload;
         photo.publicId = crypto.randomBytes(16).toString("hex");
         photo.name = `${photo.publicId}${path.parse(photo.name).ext}`;
@@ -193,73 +143,20 @@ exports.updateUser = async (id, payload) => {
     }
 };
 
-exports.updateAdmin = async (id, payload) => {
+exports.deleteUser = async (id, roles = ["user"]) => {
     const key = `user:${id}`;
-    const existingAdmin = await users.findOne({
-        where: { id, role: { [Op.or]: ["admin", "superadmin"] } },
-    });
 
-    if (payload.photo && payload.photo !== existingAdmin.photo) {
-        const { photo } = payload;
-        photo.publicId = crypto.randomBytes(16).toString("hex");
-        photo.name = `${photo.publicId}${path.parse(photo.name).ext}`;
-
-        const imageUpload = await uploader(photo);
-        payload.photo = imageUpload.secure_url;
+    // check if the current user is allowed to delete the target user
+    if (!roles.includes(req.currentUser.role) && req.currentUser.id !== id) {
+        throw new Error(`Forbidden!`);
     }
-
-    // update data in db
-    await users.update(payload, {
-        where: {
-            id,
-            role: {
-                [Op.or]: ["admin", "superadmin"],
-            },
-        },
-    });
-
-    // get data from db in order to update the cache
-    const data = await users.findAll({
-        where: {
-            id,
-            role: {
-                [Op.or]: ["admin", "superadmin"],
-            },
-        },
-    });
-
-    if (data.length > 0) {
-        await deleteCache(key);
-        await setCache(key, data[0], 300);
-        return data[0];
-    } else {
-        throw new Error(`Admin is not found!`);
-    }
-};
-
-exports.deleteUser = async (id) => {
-    const key = `user:${id}`;
-
-    // delete data in db
-    await users.destroy({
-        where: {
-            id,
-        },
-    });
-
-    // delete data in cache
-    await deleteCache(key);
-};
-
-exports.deleteAdmin = async (id) => {
-    const key = `user:${id}`;
 
     // delete data in db
     await users.destroy({
         where: {
             id,
             role: {
-                [Op.or]: ["admin", "superadmin"],
+                [Op.or]: roles,
             },
         },
     });
