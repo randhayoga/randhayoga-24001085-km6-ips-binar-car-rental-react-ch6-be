@@ -56,31 +56,23 @@ exports.createAdmin = async (payload) => {
 };
 
 exports.getAllUsers = async (roles) => {
-    const key = `users:${roles}`;
-    let data = await getCache(key);
+    // data is not in cache, then get data from db
+    if (roles) {
+        data = await users.findAll({
+            where: {
+                role: {
+                    [Op.or]: roles,
+                },
+            },
+        });
+    } else {
+        data = await users.findAll();
+    }
 
-    if (data) {
+    if (data.length > 0) {
         return data;
     } else {
-        // data is not in cache, then get data from db
-        if (roles) {
-            data = await users.findAll({
-                where: {
-                    role: {
-                        [Op.or]: roles,
-                    },
-                },
-            });
-        } else {
-            data = await users.findAll();
-        }
-
-        if (data.length > 0) {
-            await setCache(key, data, 300);
-            return data;
-        } else {
-            throw new Error(`Not a single user found!`);
-        }
+        throw new Error(`Not a single user found!`);
     }
 };
 
@@ -168,18 +160,20 @@ exports.updateUser = async (id, payload) => {
 };
 
 exports.deleteUser = async (id) => {
-    const key = `user:${id}`;
-
-    // delete data in db
-    await users.destroy({
+    const data = await users.findAll({
         where: {
             id,
-            role: {
-                [Op.or]: roles,
-            },
         },
     });
 
-    // delete data in cache
-    await deleteCache(key);
+    if (data.length > 0) {
+        // delete data in db
+        await users.destroy({
+            where: { id },
+        });
+
+        return data[0];
+    } else {
+        throw new Error(`User not found!`);
+    }
 };

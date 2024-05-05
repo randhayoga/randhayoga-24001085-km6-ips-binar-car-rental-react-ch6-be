@@ -153,7 +153,7 @@ exports.getCarByID = async (req, res, next) => {
 exports.updateCar = async (req, res, next) => {
     try {
         const { id } = req?.params;
-        const { image } = req?.files;
+        const image = req?.files?.image;
         const editedBy = req?.user?.id;
 
         let payload = {};

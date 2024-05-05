@@ -1,7 +1,6 @@
-const { Users: users, Cars: cars } = require("../../models");
+const { Cars: cars } = require("../../models");
 const { uploader } = require("../../helper/cloudinary");
 const { getCache, setCache, deleteCache } = require("../../helper/redis");
-const { where } = require("sequelize");
 
 exports.createCar = async (payload) => {
     if (payload.image) {

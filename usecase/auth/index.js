@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const {
     createUser,
     createAdmin,
+    getAllUsers,
     getUserByID,
     getUserByEmail,
     updateUser,
@@ -131,8 +132,8 @@ exports.updateUser = async (id, payload, currentRole, currentID) => {
     return data;
 };
 
-exports.deleteUser = async (id, roles) => {
-    let data = await deleteUser(id, roles);
+exports.deleteUser = async (id) => {
+    let data = await deleteUser(id);
     if (!data) {
         throw new Error(`User is not found!`);
     }

@@ -7,6 +7,7 @@ const {
     updateUser,
     deleteUser,
 } = require("../usecase/auth");
+const { getTokenFromHeaders, extractToken } = require("../helper/auth");
 
 exports.registerUser = async (req, res, next) => {
     try {
@@ -164,40 +165,29 @@ exports.getUserByID = async (req, res, next) => {
 exports.updateUser = async (req, res, next) => {
     try {
         const { id } = req?.params;
-        const { email, password, name } = req?.body;
-        const { photo } = req?.files;
-        const currentRole = req?.user?.role;
-        const currentID = req?.user?.id;
+        const photo = req?.files?.photo;
+        const token = getTokenFromHeaders(req?.headers);
+        const extractedToken = extractToken(token);
+        const currentUser = await getUserByID(extractedToken?.id);
 
-        if (email == "" || !email) {
-            return next({
-                message: "Email must be filled!",
-                statusCode: 400,
-            });
-        }
-        if (password == "" || !password) {
-            return next({
-                message: "Password must be filled!",
-                statusCode: 400,
-            });
-        }
-        if (name == "" || !name) {
-            return next({
-                message: "Name must be filled!",
-                statusCode: 400,
-            });
-        }
-
-        if (currentID !== id && currentRole !== "superadmin") {
+        if (
+            currentUser?.id !== parseInt(id) &&
+            currentUser?.role !== "superadmin"
+        ) {
             throw new Error(`Forbidden!`);
         }
 
-        const data = await updateUser(id, {
-            email,
-            password,
-            name,
-            photo,
-        });
+        let payload = {};
+        for (let key in req.body) {
+            if (req.body[key] !== "") {
+                payload[key] = req.body[key];
+            }
+        }
+        if (photo) {
+            payload.photo = photo;
+        }
+
+        const data = await updateUser(id, payload);
 
         res.status(200).json({
             message: "Success",
@@ -211,10 +201,14 @@ exports.updateUser = async (req, res, next) => {
 exports.deleteUser = async (req, res, next) => {
     try {
         const { id } = req?.params;
-        const currentID = req?.user?.id;
-        const currentRole = req?.user?.role;
+        const token = getTokenFromHeaders(req?.headers);
+        const extractedToken = extractToken(token);
+        const currentUser = await getUserByID(extractedToken?.id);
 
-        if (currentID !== id && currentRole !== "superadmin") {
+        if (
+            currentUser?.id !== parseInt(id) &&
+            currentUser?.role !== "superadmin"
+        ) {
             throw new Error(`Forbidden!`);
         }
 

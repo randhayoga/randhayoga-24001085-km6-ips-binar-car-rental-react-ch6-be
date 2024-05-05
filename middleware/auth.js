@@ -1,12 +1,12 @@
 const { getTokenFromHeaders, extractToken } = require("../helper/auth");
-const { profile } = require("../usecase/auth/index");
+const { getUserByID } = require("../usecase/auth/index");
 
 exports.authMiddleware = (roles) => async (req, res, next) => {
     try {
         const token = getTokenFromHeaders(req?.headers);
         const extractedToken = extractToken(token);
 
-        const user = await profile(extractedToken?.id);
+        const user = await getUserByID(extractedToken?.id);
         if (!roles.includes(user?.role)) {
             return next({
                 message: "Forbidden!",

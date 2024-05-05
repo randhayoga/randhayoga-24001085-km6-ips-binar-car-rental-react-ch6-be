@@ -17,3 +17,5 @@ router
     .get(authController.getUserByID)
     .put(authController.updateUser)
     .delete(authController.deleteUser);
+
+module.exports = router;
