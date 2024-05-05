@@ -1,1 +1,5 @@
-# When ready to deploy
+runtime: nodejs20
+service: challenge-6
+
+vpc_access_connector:
+    name: "projects/kampus-merdeka-6-ips/locations/asia-southeast2/connectors/connect-to-sql"
