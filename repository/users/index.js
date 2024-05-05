@@ -55,6 +55,35 @@ exports.createAdmin = async (payload) => {
     return data;
 };
 
+exports.getAllUsers = async (roles) => {
+    const key = `users:${roles}`;
+    let data = await getCache(key);
+
+    if (data) {
+        return data;
+    } else {
+        // data is not in cache, then get data from db
+        if (roles) {
+            data = await users.findAll({
+                where: {
+                    role: {
+                        [Op.or]: roles,
+                    },
+                },
+            });
+        } else {
+            data = await users.findAll();
+        }
+
+        if (data.length > 0) {
+            await setCache(key, data, 300);
+            return data;
+        } else {
+            throw new Error(`Not a single user found!`);
+        }
+    }
+};
+
 exports.getUserByID = async (id, roles) => {
     const key = `user:${id}`;
     let data = await getCache(key);
@@ -102,13 +131,8 @@ exports.getUserByEmail = async (email) => {
     }
 };
 
-exports.updateUser = async (id, payload, currentRole, currentID) => {
+exports.updateUser = async (id, payload) => {
     const key = `user:${id}`;
-
-    // permision check
-    if (currentRole !== "superadmin" && currentID !== id) {
-        throw new Error(`Forbidden!`);
-    }
 
     // photo upload
     if (payload.photo) {
@@ -143,13 +167,8 @@ exports.updateUser = async (id, payload, currentRole, currentID) => {
     }
 };
 
-exports.deleteUser = async (id, roles = ["user"]) => {
+exports.deleteUser = async (id) => {
     const key = `user:${id}`;
-
-    // check if the current user is allowed to delete the target user
-    if (!roles.includes(req.currentUser.role) && req.currentUser.id !== id) {
-        throw new Error(`Forbidden!`);
-    }
 
     // delete data in db
     await users.destroy({

@@ -82,7 +82,26 @@ exports.loginUser = async (email, password) => {
     return data;
 };
 
-exports.profile = async (id, roles) => {
+exports.getAllUsers = async (roles) => {
+    let data = await getAllUsers(roles);
+    if (!data) {
+        throw new Error(`Not a single user found!`);
+    }
+
+    data = data.map((item) => {
+        if (item?.dataValues?.password) {
+            delete item?.dataValues?.password;
+        } else {
+            delete item?.password;
+        }
+
+        return item;
+    });
+
+    return data;
+};
+
+exports.getUserByID = async (id, roles) => {
     let data = await getUserByID(id, roles);
     if (!data) {
         throw new Error(`User is not found!`);
@@ -97,7 +116,7 @@ exports.profile = async (id, roles) => {
     return data;
 };
 
-exports.updateProfile = async (id, payload, currentRole, currentID) => {
+exports.updateUser = async (id, payload, currentRole, currentID) => {
     let data = await updateUser(id, payload, currentRole, currentID);
     if (!data) {
         throw new Error(`User is not found!`);
@@ -112,7 +131,7 @@ exports.updateProfile = async (id, payload, currentRole, currentID) => {
     return data;
 };
 
-exports.deleteProfile = async (id, roles) => {
+exports.deleteUser = async (id, roles) => {
     let data = await deleteUser(id, roles);
     if (!data) {
         throw new Error(`User is not found!`);
