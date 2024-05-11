@@ -12,7 +12,7 @@ const { getTokenFromHeaders, extractToken } = require("../helper/auth");
 exports.registerUser = async (req, res, next) => {
     try {
         const { email, password, name } = req?.body;
-        const { photo } = req?.files;
+        const photo = req?.files?.photo;
 
         if (email == "" || !email) {
             return next({
@@ -52,7 +52,7 @@ exports.registerUser = async (req, res, next) => {
 exports.registerAdmin = async (req, res, next) => {
     try {
         const { email, password, name } = req?.body;
-        const { photo } = req?.files;
+        const photo = req?.files?.photo;
 
         if (email == "" || !email) {
             return next({
