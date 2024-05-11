@@ -12,6 +12,11 @@ router.post(
 );
 router.post("/login", authController.loginUser);
 router.get("/", authMiddleware(["superadmin"]), authController.getAllUsers);
+router.get(
+    "/profile",
+    authMiddleware(["user", "admin", "superadmin"]),
+    authController.profile
+);
 router
     .route("/:id")
     .get(authController.getUserByID)
